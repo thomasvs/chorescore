@@ -29,7 +29,11 @@ class ChoreSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'description' )
 
 
-class ScoreSerializer(serializers.HyperlinkedModelSerializer):
+class ScoreFullSerializer(serializers.HyperlinkedModelSerializer):
+    """
+    I serialize with full related objects.
+    Useful for GET, but not for POST.
+    """
 
     chore = ChoreSerializer(many=False)
     user = UserSerializer(many=False)
@@ -43,5 +47,20 @@ class ScoreSerializer(serializers.HyperlinkedModelSerializer):
             'period',
             'like', 'weight', 'count',
         )
+        depth = 1
 
+class ScoreIdSerializer(serializers.ModelSerializer):
+    """
+    I serialize with only id's for objects.
+    Useful for POST.
+    """
+
+    class Meta:
+        model = models.Score
+        fields = (
+            'chore',
+            'user',
+            'period',
+            'like', 'weight', 'count',
+        )
 

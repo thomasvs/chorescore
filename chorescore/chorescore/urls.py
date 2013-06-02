@@ -8,6 +8,7 @@ router.register(r'groups', views.GroupViewSet)
 router.register(r'periods', views.PeriodViewSet)
 router.register(r'chores', views.ChoreViewSet)
 router.register(r'scores', views.ScoreViewSet)
+router.register(r'scores-full', views.ScoreFullViewSet)
 
 
 # Uncomment the next two lines to enable the admin:

@@ -42,7 +42,7 @@ class ScoreViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows scores to be viewed or edited.
     """
-    serializer_class = serializers.ScoreSerializer
+    serializer_class = serializers.ScoreIdSerializer
     queryset = models.Score.objects.all() # to get the name
 
     def get_queryset(self):
@@ -65,14 +65,19 @@ class ScoreViewSet(viewsets.ModelViewSet):
 #        print 'THOMAS: score!'
 #        return response.Response({'status': 'score set'})
 
-
+class ScoreFullViewSet(ScoreViewSet):
+    """
+    API endpoint that allows scores to be viewed in full.
+    """
+    serializer_class = serializers.ScoreFullSerializer
+ 
 #class UserPeriodChores(viewsets.ModelViewSet):
 class UserPeriodChores(generics.ListAPIView):
     """
     API endpoint that allows chores to be seen or added for a given user
     and period.
     """
-    serializer_class = serializers.ScoreSerializer
+    serializer_class = serializers.ScoreFullSerializer
 
     def get_queryset(self):
             """
