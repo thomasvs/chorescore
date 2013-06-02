@@ -1,4 +1,5 @@
 from django.db import models
+from django.core import validators
 
 from django.contrib.auth import models as amodels
 
@@ -30,7 +31,11 @@ class Score(models.Model):
     chore = models.ForeignKey(Chore)
 
     like = models.BooleanField()
-    weight = models.PositiveIntegerField()
-    count = models.PositiveIntegerField()
+    weight = models.PositiveIntegerField(
+        validators=[
+            validators.MaxValueValidator(3),
+            validators.MinValueValidator(1)
+        ])
+    count = models.PositiveIntegerField(default=1)
 
 
