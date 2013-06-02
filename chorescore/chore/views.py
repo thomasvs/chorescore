@@ -5,7 +5,8 @@ from chore import serializers
 
 from django.contrib.auth.models import User, Group
 
-from rest_framework import viewsets, generics
+from rest_framework import viewsets, generics, decorators, response
+
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -36,11 +37,13 @@ class PeriodViewSet(viewsets.ModelViewSet):
     queryset = models.Period.objects.all()
     serializer_class = serializers.PeriodSerializer
 
-class ScoreList(generics.ListAPIView):
+#class ScoreList(generics.ListAPIView):
+class ScoreViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows scores to be viewed or edited.
     """
     serializer_class = serializers.ScoreSerializer
+    queryset = models.Score.objects.all() # to get the name
 
     def get_queryset(self):
         """
@@ -56,6 +59,12 @@ class ScoreList(generics.ListAPIView):
         if period_id is not None:
             queryset = queryset.filter(period_id=period_id)
         return queryset
+
+#    @decorators.action
+#    def score(self, *args, **kwargs):
+#        print 'THOMAS: score!'
+#        return response.Response({'status': 'score set'})
+
 
 #class UserPeriodChores(viewsets.ModelViewSet):
 class UserPeriodChores(generics.ListAPIView):

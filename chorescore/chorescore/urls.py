@@ -7,7 +7,7 @@ router.register(r'users', views.UserViewSet)
 router.register(r'groups', views.GroupViewSet)
 router.register(r'periods', views.PeriodViewSet)
 router.register(r'chores', views.ChoreViewSet)
-#router.register(r'scores', views.ScoreViewSet)
+router.register(r'scores', views.ScoreViewSet)
 
 
 # Uncomment the next two lines to enable the admin:
@@ -26,9 +26,9 @@ urlpatterns = patterns('',
     url(r'^api/users/(?P<user_id>[0-9]+)/periods/(?P<period_id>[0-9]+)/chores/$',
         views.UserPeriodChores.as_view(),
         name='user-period-chore'),
-    url(r'^api/score/$',
-        views.ScoreList.as_view(),
-        name='score'),
+#    url(r'^api/score/$',
+#        views.ScoreList.as_view(),
+#        name='score'),
 
     url(r'^rest-api/', include('rest_framework_docs.urls')),
 
