@@ -48,7 +48,6 @@ class ScoreList(generics.ListAPIView):
         by filtering against a `user_id` and `period_id` query parameter in the
         URL.
         """
-        print 'THOMAS: queryset'
         queryset = models.Score.objects.all()
         user_id = self.request.QUERY_PARAMS.get('user_id', None)
         if user_id is not None:

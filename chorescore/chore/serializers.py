@@ -30,8 +30,18 @@ class ChoreSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class ScoreSerializer(serializers.HyperlinkedModelSerializer):
+
+    chore = ChoreSerializer(many=False)
+    user = UserSerializer(many=False)
+    period = PeriodSerializer(many=False)
+
     class Meta:
         model = models.Score
-        fields = ('like', 'weight', 'count', 'chore' )
+        fields = (
+            'chore',
+            'user',
+            'period',
+            'like', 'weight', 'count',
+        )
 
 
