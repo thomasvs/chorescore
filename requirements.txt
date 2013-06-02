@@ -2,5 +2,6 @@ Django==1.5.1
 django-cors-headers==0.10
 django-rest-framework-docs==0.1.4
 djangorestframework==2.3.4
+docutils==0.10
 jsonpickle==0.4.0
 wsgiref==0.1.2

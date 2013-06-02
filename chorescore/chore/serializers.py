@@ -62,7 +62,21 @@ class ScoreIdSerializer(serializers.ModelSerializer):
         fields = (
             'chore',
             'user',
+            'group',
             'period',
             'like', 'weight', 'count',
         )
+
+
+class ResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Result
+        fields = (
+            'user',
+            'group',
+            'period',
+            'points',
+            'total',
+        )
+
 

@@ -30,6 +30,9 @@ urlpatterns = patterns('',
 #    url(r'^api/score/$',
 #        views.ScoreList.as_view(),
 #        name='score'),
+    url(r'^api/results/$',
+        views.ResultList.as_view(),
+        name='result'),
 
 #    url(r'^rest-api/', include('rest_framework_docs.urls')),
 

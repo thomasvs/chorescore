@@ -23,8 +23,8 @@ class Chore(models.Model):
 class Score(models.Model):
 
     def __unicode__(self):
-        return u'<Score weight %d, %s>' % (self.weight,
-            self.like and 'like' or 'not/dislike')
+        return u'<Score weight %d, %s, completed %d times>' % (self.weight,
+            self.like and 'like' or 'not/dislike', self.count)
 
     user = models.ForeignKey(amodels.User)
     group = models.ForeignKey(amodels.Group)
@@ -40,4 +40,22 @@ class Score(models.Model):
     # how many times this user completed the task
     count = models.PositiveIntegerField(default=0)
 
+    def points(self):
+        """
+        Calculate the points this task represents.
+        """
+        p = self.weight
+        if not self.like:
+            p *= 2
+        return p
+
+
+class Result(models.Model):
+
+    user = models.ForeignKey(amodels.User)
+    group = models.ForeignKey(amodels.Group)
+    period = models.ForeignKey(Period)
+
+    points = models.PositiveIntegerField()
+    total = models.PositiveIntegerField(default=0)
 
