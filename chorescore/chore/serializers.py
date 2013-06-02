@@ -23,4 +23,15 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Period
         fields = ('url', 'name', )
 
+class ChoreSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.Chore
+        fields = ('url', 'description' )
+
+
+class ScoreSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.Score
+        fields = ('like', 'weight', 'count', 'chore' )
+
 

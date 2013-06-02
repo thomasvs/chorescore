@@ -4,7 +4,8 @@ from chore import models
 from chore import serializers
 
 from django.contrib.auth.models import User, Group
-from rest_framework import viewsets
+
+from rest_framework import viewsets, generics
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -20,19 +21,50 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = serializers.GroupSerializer
 
-class PeriodViewSet(viewsets.ModelViewSet):
+class ChoreViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited.
+    """
+    queryset = models.Chore.objects.all()
+    serializer_class = serializers.ChoreSerializer
+
+
+class PeriodViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows periods to be viewed or edited.
     """
     queryset = models.Period.objects.all()
     serializer_class = serializers.PeriodSerializer
 
-class UserPeriodChores(viewsets.ModelViewSet):
+class ScoreList(generics.ListAPIView):
+    """
+    API endpoint that allows scores to be viewed or edited.
+    """
+    serializer_class = serializers.ScoreSerializer
+
+    def get_queryset(self):
+        """
+        Optionally restricts the returned purchases to a given user,
+        by filtering against a `user_id` and `period_id` query parameter in the
+        URL.
+        """
+        print 'THOMAS: queryset'
+        queryset = models.Score.objects.all()
+        user_id = self.request.QUERY_PARAMS.get('user_id', None)
+        if user_id is not None:
+            queryset = queryset.filter(user_id=user_id)
+        period_id = self.request.QUERY_PARAMS.get('period_id', None)
+        if period_id is not None:
+            queryset = queryset.filter(period_id=period_id)
+        return queryset
+
+#class UserPeriodChores(viewsets.ModelViewSet):
+class UserPeriodChores(generics.ListAPIView):
     """
     API endpoint that allows chores to be seen or added for a given user
     and period.
     """
-    serializer_class = serializers.PeriodSerializer
+    serializer_class = serializers.ScoreSerializer
 
     def get_queryset(self):
             """
@@ -41,5 +73,5 @@ class UserPeriodChores(viewsets.ModelViewSet):
             """
             user_id = self.kwargs['user_id']
             period_id = self.kwargs['period_id']
-            return models.Chore.objects.filter(
+            return models.Score.objects.filter(
                 user_id=user_id, period_id=period_id)
