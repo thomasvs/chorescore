@@ -19,6 +19,12 @@ urlpatterns = patterns('',
 
     url(r'^api/', include(router.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+
+    # no idea why the quickstart uses router and tutorial uses normal url
+    url(r'^users/(?P<user_id>[0-9]+)/periods/(?P<period_id>[0-9]+)/chore/$',
+        views.UserPeriodChores.as_view(),
+        name='user-period-chore'),
+
     url(r'^rest-api/', include('rest_framework_docs.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
