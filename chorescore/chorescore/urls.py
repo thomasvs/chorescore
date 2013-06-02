@@ -1,10 +1,11 @@
 from django.conf.urls import patterns, include, url
 from rest_framework import routers
-from quickstart import views
+from chore import views
 
 router = routers.DefaultRouter()
 router.register(r'users', views.UserViewSet)
 router.register(r'groups', views.GroupViewSet)
+router.register(r'periods', views.PeriodViewSet)
 
 
 # Uncomment the next two lines to enable the admin:
@@ -16,7 +17,7 @@ urlpatterns = patterns('',
     # url(r'^$', 'chorescore.views.home', name='home'),
     # url(r'^chorescore/', include('chorescore.foo.urls')),
 
-    url(r'^', include(router.urls)),
+    url(r'^api/', include(router.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^rest-api/', include('rest_framework_docs.urls')),
 
