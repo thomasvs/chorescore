@@ -37,6 +37,7 @@ class ScoreFullSerializer(serializers.HyperlinkedModelSerializer):
 
     chore = ChoreSerializer(many=False)
     user = UserSerializer(many=False)
+    group = GroupSerializer(many=False)
     period = PeriodSerializer(many=False)
 
     class Meta:
@@ -44,6 +45,7 @@ class ScoreFullSerializer(serializers.HyperlinkedModelSerializer):
         fields = (
             'chore',
             'user',
+            'group',
             'period',
             'like', 'weight', 'count',
         )

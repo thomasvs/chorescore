@@ -70,96 +70,6 @@
     }
 },
 {
-    "pk": 1, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "period", 
-        "name": "period", 
-        "app_label": "chore"
-    }
-},
-{
-    "pk": 2, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "chore", 
-        "name": "chore", 
-        "app_label": "chore"
-    }
-},
-{
-    "pk": 3, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "score", 
-        "name": "score", 
-        "app_label": "chore"
-    }
-},
-{
-    "pk": 4, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "permission", 
-        "name": "permission", 
-        "app_label": "auth"
-    }
-},
-{
-    "pk": 5, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "group", 
-        "name": "group", 
-        "app_label": "auth"
-    }
-},
-{
-    "pk": 6, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "user", 
-        "name": "user", 
-        "app_label": "auth"
-    }
-},
-{
-    "pk": 7, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "contenttype", 
-        "name": "content type", 
-        "app_label": "contenttypes"
-    }
-},
-{
-    "pk": 8, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "session", 
-        "name": "session", 
-        "app_label": "sessions"
-    }
-},
-{
-    "pk": 9, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "site", 
-        "name": "site", 
-        "app_label": "sites"
-    }
-},
-{
-    "pk": 10, 
-    "model": "contenttypes.contenttype", 
-    "fields": {
-        "model": "logentry", 
-        "name": "log entry", 
-        "app_label": "admin"
-    }
-},
-{
     "pk": "gu3ggb08s6m7isl6avlqdfqtjmtdmi4l", 
     "model": "sessions.session", 
     "fields": {
@@ -732,6 +642,33 @@
     }
 },
 {
+    "pk": 61, 
+    "model": "auth.permission", 
+    "fields": {
+        "codename": "add_result", 
+        "name": "Can add result", 
+        "content_type": 11
+    }
+},
+{
+    "pk": 62, 
+    "model": "auth.permission", 
+    "fields": {
+        "codename": "change_result", 
+        "name": "Can change result", 
+        "content_type": 11
+    }
+},
+{
+    "pk": 63, 
+    "model": "auth.permission", 
+    "fields": {
+        "codename": "delete_result", 
+        "name": "Can delete result", 
+        "content_type": 11
+    }
+},
+{
     "pk": 1, 
     "model": "auth.group", 
     "fields": {
@@ -957,7 +894,34 @@
         "like": true, 
         "weight": 2, 
         "period": 3, 
+        "group": 1,
         "user": 1
+    }
+},
+{
+    "pk": 2, 
+    "model": "chore.score", 
+    "fields": {
+        "count": 1, 
+        "chore": 1, 
+        "like": true, 
+        "weight": 3, 
+        "period": 3, 
+        "group": 1,
+        "user": 2
+    }
+},
+{
+    "pk": 3, 
+    "model": "chore.score", 
+    "fields": {
+        "count": 1, 
+        "chore": 6, 
+        "like": false, 
+        "weight": 3, 
+        "period": 3, 
+        "group": 1,
+        "user": 2
     }
 }
 ]

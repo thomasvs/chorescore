@@ -31,7 +31,7 @@ urlpatterns = patterns('',
 #        views.ScoreList.as_view(),
 #        name='score'),
 
-    url(r'^rest-api/', include('rest_framework_docs.urls')),
+#    url(r'^rest-api/', include('rest_framework_docs.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),

@@ -27,6 +27,7 @@ class Score(models.Model):
             self.like and 'like' or 'not/dislike')
 
     user = models.ForeignKey(amodels.User)
+    group = models.ForeignKey(amodels.Group)
     period = models.ForeignKey(Period)
     chore = models.ForeignKey(Chore)
 
@@ -36,6 +37,7 @@ class Score(models.Model):
             validators.MaxValueValidator(3),
             validators.MinValueValidator(1)
         ])
-    count = models.PositiveIntegerField(default=1)
+    # how many times this user completed the task
+    count = models.PositiveIntegerField(default=0)
 
 
