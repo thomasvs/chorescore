@@ -8,25 +8,26 @@ from django.contrib.auth.models import User, Group
 
 from rest_framework import serializers
 
+# see http://stackoverflow.com/questions/15014495/id-field-in-django-rest-framework-serializer
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
-        fields = ('url', 'username', 'email', 'groups')
+        fields = ('id', 'url', 'username', 'email', 'groups')
 
 class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
-        fields = ('url', 'name')
+        fields = ('id', 'url', 'name')
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Period
-        fields = ('url', 'name', )
+        fields = ('id', 'url', 'name', )
 
 class ChoreSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Chore
-        fields = ('url', 'description' )
+        fields = ('id', 'url', 'description' )
 
 
 class ScoreFullSerializer(serializers.HyperlinkedModelSerializer):
@@ -43,6 +44,7 @@ class ScoreFullSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Score
         fields = (
+            'id',
             'chore',
             'user',
             'group',
@@ -60,6 +62,7 @@ class ScoreIdSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Score
         fields = (
+            'id',
             'chore',
             'user',
             'group',
@@ -72,6 +75,7 @@ class ResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Result
         fields = (
+            'id',
             'user',
             'group',
             'period',
