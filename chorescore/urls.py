@@ -1,4 +1,6 @@
 from django.conf.urls import patterns, include, url
+from django.views.generic import RedirectView
+
 from rest_framework import routers
 from chore import views
 
@@ -41,4 +43,7 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),
+
+    # home page
+    url(r'^$', RedirectView.as_view(url='/static/index.html')),
 )
