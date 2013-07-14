@@ -4,7 +4,8 @@ from django.views.generic import RedirectView
 from rest_framework import routers
 from chore import views
 
-router = routers.DefaultRouter()
+# angular insists on stripping off the trailing slash
+router = routers.DefaultRouter(trailing_slash=False)
 router.register(r'users', views.UserViewSet)
 router.register(r'groups', views.GroupViewSet)
 router.register(r'periods', views.PeriodViewSet)
