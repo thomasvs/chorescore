@@ -36,9 +36,10 @@ class Score(models.Model):
 
     like = models.BooleanField()
     weight = models.PositiveIntegerField(
+        default=0,
         validators=[
             validators.MaxValueValidator(3),
-            validators.MinValueValidator(1)
+            validators.MinValueValidator(0)
         ])
     # how many times this user completed the task
     count = models.PositiveIntegerField(default=0)
