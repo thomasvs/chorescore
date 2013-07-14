@@ -251,7 +251,7 @@ angular.module( 'ngBoilerplate.home', [
 .controller( 'HomeCtrl', function HomeController( $scope, titleService , $resource, $location, filterFilter, $http, $q) {
     var _ = window._;  
     $scope.options = {
-        userId:0
+        user:undefined
     };
 
     titleService.setTitle( 'Home' );
@@ -269,15 +269,17 @@ angular.module( 'ngBoilerplate.home', [
     var Chore = $resource(urlApiBase + choreApi, {port:portN}, { });
     console.log(4000);
 
-    var scoreApi = '/scores/:scoresId';
-    var Score = $resource(urlApiBase + scoreApi, {port:portN}, { });
+    var scoreApi = '/scores/:scoreId';
+    var Score = $resource(urlApiBase + scoreApi, {port:portN, scoreId:'@id'}, {
+        update: {method:"PUT"}
+     });
 
-    var resultsApi = '/results/';
+    var resultsApi = '/results';
     var Results = $resource(urlApiBase + resultsApi, {port:portN}, { });
 
 
 
-    $scope.resultados = Results.get();
+    $scope.resultado = Results.get();
 
     var STORAGE_ID = 'todos-angularjs';
     //todoMVC 
@@ -320,9 +322,7 @@ angular.module( 'ngBoilerplate.home', [
                 console.log(u);
                 console.log(responseHeaders);
                 $scope.newTodo = '';
-                todos = $scope.todos = Chore.get(function(resp){
-                    $scope.chores = resp.results;
-                });
+                setResources('Chore');
         });
 
     };
@@ -343,40 +343,85 @@ angular.module( 'ngBoilerplate.home', [
     };
 
     $scope.removeTodo = function (todo) {
-        todos.splice(todos.indexOf(todo), 1);
+        chores.splice(chores.indexOf(todo), 1);
     };
 
     var hardcoded_period = 3;
     var hardcoded_group = 1;
 
-    $scope.score = function (chore, points) {
-        console.log('savingScore');
-        console.log({chore:chore.id, group:hardcoded_group, user:$scope.options.userId, period:hardcoded_period, weight:points});
-        var newScore = new Score({chore:chore.id, group:hardcoded_group, user:$scope.options.userId, period:hardcoded_period, weight:points});
-        newScore.$save({}, function(u, responseHeaders) {
-            $scope.resultado = Results.get();
-           console.log('saved score');
-            console.log(u);
-        });
+    $scope.setScoreDificulty = function (chore, points) {
+        console.log('savingDificulty');
+        console.log({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period, weight:points});
+        if(chore.score.fakeScore){
+            var newScore = new Score({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period, weight:points});
+            newScore.$save({}, function(u, responseHeaders) {
+                $scope.resultado = Results.get();
+                updateAll();
+                console.log('saved score');
+                console.log(u);
+            });
+        }else{
+            Score.get({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period}, function(resp){
+                console.log('respuesta de get grupal');
+                console.log(resp);
+                
+                Score.get({scoreId:resp.results[0].id}, function(respScore){
+                    console.log('respuesta de get individual');
+                    console.log(respScore);
+                    respScore.weight = points;
+                    respScore.$update({},function(){
+                        $scope.resultado = Results.get();
+                        updateAll();
+                    });
+                });
+            });
+        }
     };
 
+    $scope.setLike = function (chore, points) {
+        console.log('savingLike');
+        if(chore.score.fakeScore){
+            var newScore = new Score({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period, like:true});
+            newScore.$save({}, function(u, responseHeaders) {
+                $scope.resultado = Results.get();
+                updateAll();
+                console.log('saved score');
+                console.log(u);
+            });
+        }else{
+            Score.get({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period}, function(resp){
+                console.log('respuesta de get grupal');
+                console.log(resp);
+                
+                Score.get({scoreId:resp.results[0].id}, function(respScore){
+                    console.log('respuesta de get individual');
+                    console.log(respScore);
+                    respScore.like = !chore.score.like;
+                    respScore.$update({},function(){
+                        $scope.resultado = Results.get();
+                        updateAll();
+                    });
+                });
+            });
+        }
+    };
 
     $scope.clearCompletedTodos = function () {
-        $scope.todos = todos = todos.filter(function (val) {
+        $scope.chores = chores = chores.filter(function (val) {
             return !val.completed;
         });
     };
 
     console.log(9000);
     $scope.markAll = function (completed) {
-        todos.forEach(function (todo) {
+        chores.forEach(function (todo) {
             todo.completed = completed;
         });
     };
 
     var extractAndSetId = function (obj){
         var url = obj.url;
-        var objId = parseInt (url.substring(url.substring(0, url.length -1).lastIndexOf('/')+1, url.length -1), 10);
+        var objId = parseInt (url.substring(url.substring(0, url.length -1).lastIndexOf('/')+1, url.length), 10);
         obj.id = objId;
     };
 
@@ -385,6 +430,7 @@ angular.module( 'ngBoilerplate.home', [
         switch(type){
             case 'Score':
                 Score.get(function(resp) {
+                    $scope.scores = resp.results;
                     d.resolve();
                 });
                 break;
@@ -410,18 +456,90 @@ angular.module( 'ngBoilerplate.home', [
 
     setResources('User');
 
-    $q.all([
-      setResources('Score'),
-      setResources('Chore')
-    ]).then(function(data) {
-        console.log('Score & chore resolved!');    
-        console.log('Chore');
-        console.log(Chore);
-        console.log('Score');
-        console.log(Score);
+    
+    var attachScoresToChores = function(){
+        /*
+        var userScores = _.filter($scope.scores, function(score){
+            return (score.user === $scope.options.userId);
+        });
+        */
+        _.each($scope.chores, function(chore){
+            var choreScore = _.find($scope.scores, function(score) {
+              //debugger;
+              return (score.chore == chore.id) && (score.user == $scope.options.user.id);
+            });
+            console.log('foundScore!');
+            console.log(choreScore); 
+            if(typeof choreScore === 'undefined'){
+                choreScore = {
+                    chore: chore.id,
+                    count: 0,
+                    group: 1,
+                    like: false,
+                    period: 3,
+                    user: $scope.options.user.id,
+                    weight: 0,
+                    fakeScore: true
+                }; 
+            }
+            chore.score = choreScore;
+        });
+    };
 
-    }); 
+    $scope.toggleDone = function(chore){
+        console.log('toggleDone');
+        if(chore.score.fakeScore){
+            var newScore = new Score({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period, count:1});
+            newScore.$save({}, function(u, responseHeaders) {
+                $scope.resultado = Results.get();
+                updateAll();
+                console.log('saved score');
+                console.log(u);
+            });
+        }else{
+            Score.get({chore:chore.id, group:hardcoded_group, user:$scope.options.user.id, period:hardcoded_period}, function(resp){
+                console.log('respuesta de get grupal');
+                console.log(resp);
+                
+                Score.get({scoreId:resp.results[0].id}, function(respScore){
+                    console.log('respuesta de get individual');
+                    console.log(respScore);
+                    
+                    respScore.count = chore.score.count ? 0 : 1;
+                    respScore.$update({},function(){
+                        $scope.resultado = Results.get();
+                        updateAll();
+                    });
+                });
+            });
+        }
+        
+    };
 
+
+    var updateAll = function(){
+        $q.all([
+          setResources('Score'),
+          setResources('Chore')
+        ]).then(function(data) {
+            console.log('Score & chore resolved!');    
+            console.log('Chore');
+            console.log($scope.chores);
+            console.log('Score');
+            console.log($scope.scores);
+            attachScoresToChores();
+
+        }); 
+    };
+    
+    $scope.userChanged = function(){
+
+        console.log('user changed!');
+        updateAll();
+        
+    };
+
+    updateAll();
 
 })
 
@@ -772,49 +890,50 @@ angular.module("home/home.tpl.html", []).run(["$templateCache", function($templa
   $templateCache.put("home/home.tpl.html",
     "<div class=\"jumbotron\">" +
     "  <p class=\"lead\">" +
-    "    <h2>Pick User</h2>" +
-    "        userId" +
-    "        {{ options.userId }}" +
-    "        <label ng-repeat=\"user in users\">" +
-    "            <input type=\"radio\" name=\"pageSet\" ng-model=\"$parent.options.userId\" ng-checked=\"model\" ng-value=\"user.id\" />{{user.username}}" +
-    "        </label> " +
+    "    <table class=\"score\">" +
+    "      <tr>" +
+    "        <td>" +
+    "    Use as:" +
+    "    <select name=\"user\" ng-model=\"options.user\" ng-options=\"user.username for user in users\" id=\"user\" ng-change=\"userChanged()\" >" +
+    "    </select>" +
+    "        </td>" +
+    "        <td ng-repeat=\"score in resultado.results\" >" +
+    "          <h4>" +
+    "          <div ng-repeat=\"user in users | filter:{id:score.user}\"> {{ user.username }} </div><br/> {{ score.points }} / {{ score.total }}" +
+    "          </h4>" +
+    "        </td>" +
+    "      </tr>" +
+    "    </table>" +
+    "" +
     "  </p>" +
-    "    <section id=\"todoapp\">" +
+    "    <section id=\"todoapp\" ng-show=\"options.user && chores.length\">" +
     "" +
     "        <header id=\"header\">" +
     "            <h1>Chores</h1>" +
     "<h3>" +
-    "                <li ng-repeat=\"score in resultado.results\" >" +
-    "" +
-    "                    {{ score.user}} : {{ score.points }} / {{ score.total }}" +
-    "                </li>" +
     "</h3>" +
     "            <form id=\"todo-form\" ng-submit=\"addTodo()\">" +
     "                <input id=\"new-todo\" placeholder=\"What needs to be done?\" ng-model=\"newTodo\" autofocus>" +
     "            </form>" +
     "        </header>" +
-    "        <section id=\"main\" ng-show=\"chores.length\" ng-cloak>" +
+    "        <section id=\"main\"  ng-cloak >" +
     "            <input id=\"toggle-all\" type=\"checkbox\" ng-model=\"allChecked\" ng-click=\"markAll(allChecked)\">" +
-    "            <ul id=\"todo-list\">" +
-    "                <li ng-repeat=\"chore in chores\" >" +
+    "            <ul id=\"todo-list\" >" +
+    "                <li ng-repeat=\"chore in chores | orderBy:id\" >" +
     "                    <div class=\"view\">" +
     "                        <label ng-click=\"check(chore)\">{{chore.description}}</label>" +
-    "                        <i class=\"icon-star-empty\" ng-click=\"score(chore, 1)\"></i>" +
-    "                        <i class=\"icon-star-half\" ng-click=\"score(chore, 2)\"></i>" +
-    "                        <i class=\"icon-star\" ng-click=\"score(chore, 3)\"></i>" +
-    "                        <i class=\"icon-thumbs-up\" ng-click=\"score(chore, 3)\"></i>" +
+    "                        <i class=\"icon-star\" ng-class=\"{scoreSoft:chore.score.weight<=1}\" ng-click=\"setScoreDificulty(chore, 1)\"></i>" +
+    "                        <i class=\"icon-star\" ng-class=\"{scoreSoft:chore.score.weight<=2}\" ng-click=\"setScoreDificulty(chore, 2)\"></i>" +
+    "                        <i class=\"icon-star\" ng-class=\"{scoreSoft:chore.score.weight<=3}\" ng-click=\"setScoreDificulty(chore, 3)\"></i>" +
+    "                        " +
+    "                        <i class=\"\" ng-class=\"{true:'icon-thumbs-up', false:'icon-thumbs-down'}[chore.score.like===true]\"  ng-click=\"setLike(chore)\"></i>" +
+    "                        <i class=\"\" ng-class=\"{true:'icon-check', false:'icon-check-empty'}[chore.score.count===1]\"  ng-click=\"toggleDone(chore)\"></i>" +
     "                    </div>" +
     "                    <form ng-submit=\"doneEditing(chore)\">" +
     "                        <input class=\"edit\" ng-model=\"chore.title\" todo-blur=\"doneEditing(chore)\" todo-focus=\"chore == editedTodo\">" +
     "                    </form>" +
     "                </li>" +
     "            </ul>" +
-    "<h3>" +
-    "                <li ng-repeat=\"score in resultado.results\" >" +
-    "" +
-    "                    {{ score.user}} : {{ score.points }} / {{ score.total }}" +
-    "                </li>" +
-    "</h3>" +
     "        </section>" +
     "        <footer id=\"footer\" ng-show=\"chores.length\" ng-cloak>" +
     "        </footer>" +
