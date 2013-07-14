@@ -26,6 +26,9 @@ class Score(models.Model):
         return u'<Score weight %d, %s, completed %d times>' % (self.weight,
             self.like and 'like' or 'not/dislike', self.count)
 
+    class mmMeta:
+        unique_together = ('user', 'group', 'period', 'chore')
+
     user = models.ForeignKey(amodels.User)
     group = models.ForeignKey(amodels.Group)
     period = models.ForeignKey(Period)
