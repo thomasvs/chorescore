@@ -1,6 +1,5 @@
 (function (window, angular, undefined) {
   angular.module('ngBoilerplate.about', [
-    'placeholders',
     'ui.bootstrap',
     'titleService'
   ]).config([
@@ -176,7 +175,10 @@
     '$location',
     'filterFilter',
     '$http',
-    function HomeController($scope, titleService, $resource, $location, filterFilter, $http) {
+    '$q',
+    function HomeController($scope, titleService, $resource, $location, filterFilter, $http, $q) {
+      var _ = window._;
+      $scope.options = { userId: 0 };
       titleService.setTitle('Home');
       console.log(3000);
       var urlApiBase = 'http://hidden-springs-9866.herokuapp.com/api';
@@ -190,15 +192,9 @@
       var Score = $resource(urlApiBase + scoreApi, { port: portN }, {});
       var resultsApi = '/results/';
       var Results = $resource(urlApiBase + resultsApi, { port: portN }, {});
-      $scope.users = User.get(function (resp) {
-        console.log('get de users');
-        console.log(resp);
-        $scope.users = resp.results;
-      });
       $scope.resultados = Results.get();
       var STORAGE_ID = 'todos-angularjs';
       console.log(6000);
-      var todos = $scope.todos = Chore.get();
       $scope.newTodo = '';
       $scope.editedTodo = null;
       if ($location.path() === '') {
@@ -217,8 +213,9 @@
           console.log(u);
           console.log(responseHeaders);
           $scope.newTodo = '';
-          var todos = $scope.todos = Chore.get();
-          $scope.chores = $scope.todos.results;
+          todos = $scope.todos = Chore.get(function (resp) {
+            $scope.chores = resp.results;
+          });
         });
       };
       $scope.check = function (todo) {
@@ -235,14 +232,22 @@
       $scope.removeTodo = function (todo) {
         todos.splice(todos.indexOf(todo), 1);
       };
-      $scope.score = function (todo, points) {
-        var url = todo.url;
-        var choreId = url.substring(url.substring(0, url.length - 1).lastIndexOf('/') + 1, url.length - 1);
+      var hardcoded_period = 3;
+      var hardcoded_group = 1;
+      $scope.score = function (chore, points) {
+        console.log('savingScore');
+        console.log({
+          chore: chore.id,
+          group: hardcoded_group,
+          user: $scope.options.userId,
+          period: hardcoded_period,
+          weight: points
+        });
         var newScore = new Score({
-            chore: choreId,
-            group: '1',
-            user: $scope.userId,
-            period: '3',
+            chore: chore.id,
+            group: hardcoded_group,
+            user: $scope.options.userId,
+            period: hardcoded_period,
             weight: points
           });
         newScore.$save({}, function (u, responseHeaders) {
@@ -262,6 +267,48 @@
           todo.completed = completed;
         });
       };
+      var extractAndSetId = function (obj) {
+        var url = obj.url;
+        var objId = parseInt(url.substring(url.substring(0, url.length - 1).lastIndexOf('/') + 1, url.length - 1), 10);
+        obj.id = objId;
+      };
+      function setResources(type) {
+        var d = $q.defer();
+        switch (type) {
+        case 'Score':
+          Score.get(function (resp) {
+            d.resolve();
+          });
+          break;
+        case 'Chore':
+          Chore.get(function (resp) {
+            $scope.chores = resp.results;
+            _.each($scope.chores, extractAndSetId);
+            d.resolve();
+          });
+          break;
+        case 'User':
+          $scope.users = User.get(function (resp) {
+            console.log('get de users');
+            console.log(resp);
+            $scope.users = resp.results;
+            _.each($scope.users, extractAndSetId);
+          });
+          break;
+        }
+        return d.promise;
+      }
+      setResources('User');
+      $q.all([
+        setResources('Score'),
+        setResources('Chore')
+      ]).then(function (data) {
+        console.log('Score & chore resolved!');
+        console.log('Chore');
+        console.log(Chore);
+        console.log('Score');
+        console.log(Score);
+      });
     }
   ]);
   ;
@@ -326,7 +373,7 @@
   angular.module('home/home.tpl.html', []).run([
     '$templateCache',
     function ($templateCache) {
-      $templateCache.put('home/home.tpl.html', '<div class="jumbotron">' + '  <h1>ChoreScore</h1>' + '' + '  <p class="lead">' + '    <h2>Pick User</h2>' + '        <label ng-repeat="user in users">' + '            <input type="radio" name="pageSet" ng-model="userId" ng-checked="model" ng-value="user.id" />{{user.username}}' + '        </label> ' + '  </p>' + '    <section id="todoapp">' + '        ' + '        <header id="header">' + '            <h1>Chores</h1>' + '<h3>' + '                <li ng-repeat="score in resultado.results" >' + '                    ' + '                    {{ score.user}} : {{ score.points }} / {{ score.total }}' + '                </li>' + '</h3>' + '            <form id="todo-form" ng-submit="addTodo()">' + '                <input id="new-todo" placeholder="What needs to be done?" ng-model="newTodo" autofocus>' + '            </form>' + '        </header>' + '        <section id="main" ng-show="todos.results.length" ng-cloak>' + '            <input id="toggle-all" type="checkbox" ng-model="allChecked" ng-click="markAll(allChecked)">' + '            <ul id="todo-list">' + '                <li ng-repeat="todo in todos.results" >' + '                    <div class="view">' + '                        <label ng-click="check(todo)">{{todo.description}}</label>' + '                        <i class="icon-star-empty" ng-click="score(todo, 1)"></i>' + '                        <i class="icon-star-half" ng-click="score(todo, 2)"></i>' + '                        <i class="icon-star" ng-click="score(todo, 3)"></i>' + '                        <i class="icon-thumbs-up" ng-click="score(todo, 3)"></i>' + '                    </div>' + '                    <form ng-submit="doneEditing(todo)">' + '                        <input class="edit" ng-model="todo.title" todo-blur="doneEditing(todo)" todo-focus="todo == editedTodo">' + '                    </form>' + '                </li>' + '            </ul>' + '<h3>' + '                <li ng-repeat="score in resultado.results" >' + '                    ' + '                    {{ score.user}} : {{ score.points }} / {{ score.total }}' + '                </li>' + '</h3>' + '        </section>' + '        <footer id="footer" ng-show="todos.results.length" ng-cloak>' + '        </footer>' + '    </section>' + '' + '</div>' + '' + '');
+      $templateCache.put('home/home.tpl.html', '<div class="jumbotron">' + '  <p class="lead">' + '    <h2>Pick User</h2>' + '        userId' + '        {{ options.userId }}' + '        <label ng-repeat="user in users">' + '            <input type="radio" name="pageSet" ng-model="$parent.options.userId" ng-checked="model" ng-value="user.id" />{{user.username}}' + '        </label> ' + '  </p>' + '    <section id="todoapp">' + '' + '        <header id="header">' + '            <h1>Chores</h1>' + '<h3>' + '                <li ng-repeat="score in resultado.results" >' + '' + '                    {{ score.user}} : {{ score.points }} / {{ score.total }}' + '                </li>' + '</h3>' + '            <form id="todo-form" ng-submit="addTodo()">' + '                <input id="new-todo" placeholder="What needs to be done?" ng-model="newTodo" autofocus>' + '            </form>' + '        </header>' + '        <section id="main" ng-show="chores.length" ng-cloak>' + '            <input id="toggle-all" type="checkbox" ng-model="allChecked" ng-click="markAll(allChecked)">' + '            <ul id="todo-list">' + '                <li ng-repeat="chore in chores" >' + '                    <div class="view">' + '                        <label ng-click="check(chore)">{{chore.description}}</label>' + '                        <i class="icon-star-empty" ng-click="score(chore, 1)"></i>' + '                        <i class="icon-star-half" ng-click="score(chore, 2)"></i>' + '                        <i class="icon-star" ng-click="score(chore, 3)"></i>' + '                        <i class="icon-thumbs-up" ng-click="score(chore, 3)"></i>' + '                    </div>' + '                    <form ng-submit="doneEditing(chore)">' + '                        <input class="edit" ng-model="chore.title" todo-blur="doneEditing(chore)" todo-focus="chore == editedTodo">' + '                    </form>' + '                </li>' + '            </ul>' + '<h3>' + '                <li ng-repeat="score in resultado.results" >' + '' + '                    {{ score.user}} : {{ score.points }} / {{ score.total }}' + '                </li>' + '</h3>' + '        </section>' + '        <footer id="footer" ng-show="chores.length" ng-cloak>' + '        </footer>' + '    </section>' + '' + '</div>' + '' + '');
     }
   ]);
   angular.module('ui.bootstrap', [
@@ -1483,1286 +1530,6 @@
       t.put('template/typeahead/typeahead.html', '<ul class="typeahead dropdown-menu" ng-style="{display: isOpen()&&\'block\' || \'none\', top: position.top+\'px\', left: position.left+\'px\'}">\n    <li ng-repeat="match in matches" ng-class="{active: isActive($index) }" ng-mouseenter="selectActive($index)">\n        <a tabindex="-1" ng-click="selectMatch($index)" ng-bind-html-unsafe="match.label | typeaheadHighlight:query"></a>\n    </li>\n</ul>');
     }
   ]);
-  angular.module('placeholders', [
-    'placeholders.img',
-    'placeholders.txt'
-  ]), angular.module('placeholders.img', []).directive('phImg', function () {
-    return {
-      restrict: 'A',
-      scope: { dimensions: '@phImg' },
-      link: function (e, t, n) {
-        function s() {
-          var t = [
-              e.size.h,
-              e.size.w
-            ].sort(), n = Math.round(t[1] / 16);
-          return Math.max(i.text_size, n);
-        }
-        function o() {
-          r = r || document.createElement('canvas');
-          var t = r.getContext('2d'), n, o;
-          return r.width = e.size.w, r.height = e.size.h, t.fillStyle = i.fill_color, t.fillRect(0, 0, e.size.w, e.size.h), n = s(), o = e.dimensions, t.fillStyle = i.text_color, t.textAlign = 'center', t.textBaseline = 'middle', t.font = 'bold ' + n + 'pt sans-serif', t.measureText(o).width / e.size.w > 1 && (n = i.text_size / (t.measureText(o).width / e.size.w), t.font = 'bold ' + n + 'pt sans-serif'), t.fillText(e.dimensions, e.size.w / 2, e.size.h / 2), r.toDataURL('image/png');
-        }
-        var r, i = {
-            text_size: 10,
-            fill_color: '#EEEEEE',
-            text_color: '#AAAAAA'
-          };
-        e.$watch('dimensions', function () {
-          if (!angular.isDefined(e.dimensions))
-            return;
-          var n = e.dimensions.match(/^(\d+)x(\d+)$/), r;
-          if (!n) {
-            console.error('Expected \'000x000\'. Got ' + e.dimensions);
-            return;
-          }
-          e.size = {
-            w: n[1],
-            h: n[2]
-          }, t.prop('title', e.dimensions), t.prop('alt', e.dimensions), r = o(), t.prop('tagName') === 'IMG' ? t.prop('src', r) : t.css('background-image', 'url("' + r + '")');
-        });
-      }
-    };
-  }), angular.module('placeholders.txt', []).factory('TextGeneratorService', function () {
-    function t(e, t) {
-      return Math.floor(Math.random() * (t - e + 1)) + e;
-    }
-    var e = [
-        'lorem',
-        'ipsum',
-        'dolor',
-        'sit',
-        'amet,',
-        'consectetur',
-        'adipiscing',
-        'elit',
-        'ut',
-        'aliquam,',
-        'purus',
-        'sit',
-        'amet',
-        'luctus',
-        'venenatis,',
-        'lectus',
-        'magna',
-        'fringilla',
-        'urna,',
-        'porttitor',
-        'rhoncus',
-        'dolor',
-        'purus',
-        'non',
-        'enim',
-        'praesent',
-        'elementum',
-        'facilisis',
-        'leo,',
-        'vel',
-        'fringilla',
-        'est',
-        'ullamcorper',
-        'eget',
-        'nulla',
-        'facilisi',
-        'etiam',
-        'dignissim',
-        'diam',
-        'quis',
-        'enim',
-        'lobortis',
-        'scelerisque',
-        'fermentum',
-        'dui',
-        'faucibus',
-        'in',
-        'ornare',
-        'quam',
-        'viverra',
-        'orci',
-        'sagittis',
-        'eu',
-        'volutpat',
-        'odio',
-        'facilisis',
-        'mauris',
-        'sit',
-        'amet',
-        'massa',
-        'vitae',
-        'tortor',
-        'condimentum',
-        'lacinia',
-        'quis',
-        'vel',
-        'eros',
-        'donec',
-        'ac',
-        'odio',
-        'tempor',
-        'orci',
-        'dapibus',
-        'ultrices',
-        'in',
-        'iaculis',
-        'nunc',
-        'sed',
-        'augue',
-        'lacus,',
-        'viverra',
-        'vitae',
-        'congue',
-        'eu,',
-        'consequat',
-        'ac',
-        'felis',
-        'donec',
-        'et',
-        'odio',
-        'pellentesque',
-        'diam',
-        'volutpat',
-        'commodo',
-        'sed',
-        'egestas',
-        'egestas',
-        'fringilla',
-        'phasellus',
-        'faucibus',
-        'scelerisque',
-        'eleifend',
-        'donec',
-        'pretium',
-        'vulputate',
-        'sapien',
-        'nec',
-        'sagittis',
-        'aliquam',
-        'malesuada',
-        'bibendum',
-        'arcu',
-        'vitae',
-        'elementum',
-        'curabitur',
-        'vitae',
-        'nunc',
-        'sed',
-        'velit',
-        'dignissim',
-        'sodales',
-        'ut',
-        'eu',
-        'sem',
-        'integer',
-        'vitae',
-        'justo',
-        'eget',
-        'magna',
-        'fermentum',
-        'iaculis',
-        'eu',
-        'non',
-        'diam',
-        'phasellus',
-        'vestibulum',
-        'lorem',
-        'sed',
-        'risus',
-        'ultricies',
-        'tristique',
-        'nulla',
-        'aliquet',
-        'enim',
-        'tortor,',
-        'at',
-        'auctor',
-        'urna',
-        'nunc',
-        'id',
-        'cursus',
-        'metus',
-        'aliquam',
-        'eleifend',
-        'mi',
-        'in',
-        'nulla',
-        'posuere',
-        'sollicitudin',
-        'aliquam',
-        'ultrices',
-        'sagittis',
-        'orci,',
-        'a',
-        'scelerisque',
-        'purus',
-        'semper',
-        'eget',
-        'duis',
-        'at',
-        'tellus',
-        'at',
-        'urna',
-        'condimentum',
-        'mattis',
-        'pellentesque',
-        'id',
-        'nibh',
-        'tortor,',
-        'id',
-        'aliquet',
-        'lectus',
-        'proin',
-        'nibh',
-        'nisl,',
-        'condimentum',
-        'id',
-        'venenatis',
-        'a,',
-        'condimentum',
-        'vitae',
-        'sapien',
-        'pellentesque',
-        'habitant',
-        'morbi',
-        'tristique',
-        'senectus',
-        'et',
-        'netus',
-        'et',
-        'malesuada',
-        'fames',
-        'ac',
-        'turpis',
-        'egestas',
-        'sed',
-        'tempus,',
-        'urna',
-        'et',
-        'pharetra',
-        'pharetra,',
-        'massa',
-        'massa',
-        'ultricies',
-        'mi,',
-        'quis',
-        'hendrerit',
-        'dolor',
-        'magna',
-        'eget',
-        'est',
-        'lorem',
-        'ipsum',
-        'dolor',
-        'sit',
-        'amet,',
-        'consectetur',
-        'adipiscing',
-        'elit',
-        'pellentesque',
-        'habitant',
-        'morbi',
-        'tristique',
-        'senectus',
-        'et',
-        'netus',
-        'et',
-        'malesuada',
-        'fames',
-        'ac',
-        'turpis',
-        'egestas',
-        'integer',
-        'eget',
-        'aliquet',
-        'nibh',
-        'praesent',
-        'tristique',
-        'magna',
-        'sit',
-        'amet',
-        'purus',
-        'gravida',
-        'quis',
-        'blandit',
-        'turpis',
-        'cursus',
-        'in',
-        'hac',
-        'habitasse',
-        'platea',
-        'dictumst',
-        'quisque',
-        'sagittis,',
-        'purus',
-        'sit',
-        'amet',
-        'volutpat',
-        'consequat,',
-        'mauris',
-        'nunc',
-        'congue',
-        'nisi,',
-        'vitae',
-        'suscipit',
-        'tellus',
-        'mauris',
-        'a',
-        'diam',
-        'maecenas',
-        'sed',
-        'enim',
-        'ut',
-        'sem',
-        'viverra',
-        'aliquet',
-        'eget',
-        'sit',
-        'amet',
-        'tellus',
-        'cras',
-        'adipiscing',
-        'enim',
-        'eu',
-        'turpis',
-        'egestas',
-        'pretium',
-        'aenean',
-        'pharetra,',
-        'magna',
-        'ac',
-        'placerat',
-        'vestibulum,',
-        'lectus',
-        'mauris',
-        'ultrices',
-        'eros,',
-        'in',
-        'cursus',
-        'turpis',
-        'massa',
-        'tincidunt',
-        'dui',
-        'ut',
-        'ornare',
-        'lectus',
-        'sit',
-        'amet',
-        'est',
-        'placerat',
-        'in',
-        'egestas',
-        'erat',
-        'imperdiet',
-        'sed',
-        'euismod',
-        'nisi',
-        'porta',
-        'lorem',
-        'mollis',
-        'aliquam',
-        'ut',
-        'porttitor',
-        'leo',
-        'a',
-        'diam',
-        'sollicitudin',
-        'tempor',
-        'id',
-        'eu',
-        'nisl',
-        'nunc',
-        'mi',
-        'ipsum,',
-        'faucibus',
-        'vitae',
-        'aliquet',
-        'nec,',
-        'ullamcorper',
-        'sit',
-        'amet',
-        'risus',
-        'nullam',
-        'eget',
-        'felis',
-        'eget',
-        'nunc',
-        'lobortis',
-        'mattis',
-        'aliquam',
-        'faucibus',
-        'purus',
-        'in',
-        'massa',
-        'tempor',
-        'nec',
-        'feugiat',
-        'nisl',
-        'pretium',
-        'fusce',
-        'id',
-        'velit',
-        'ut',
-        'tortor',
-        'pretium',
-        'viverra',
-        'suspendisse',
-        'potenti',
-        'nullam',
-        'ac',
-        'tortor',
-        'vitae',
-        'purus',
-        'faucibus',
-        'ornare',
-        'suspendisse',
-        'sed',
-        'nisi',
-        'lacus,',
-        'sed',
-        'viverra',
-        'tellus',
-        'in',
-        'hac',
-        'habitasse',
-        'platea',
-        'dictumst',
-        'vestibulum',
-        'rhoncus',
-        'est',
-        'pellentesque',
-        'elit',
-        'ullamcorper',
-        'dignissim',
-        'cras',
-        'tincidunt',
-        'lobortis',
-        'feugiat',
-        'vivamus',
-        'at',
-        'augue',
-        'eget',
-        'arcu',
-        'dictum',
-        'varius',
-        'duis',
-        'at',
-        'consectetur',
-        'lorem',
-        'donec',
-        'massa',
-        'sapien,',
-        'faucibus',
-        'et',
-        'molestie',
-        'ac,',
-        'feugiat',
-        'sed',
-        'lectus',
-        'vestibulum',
-        'mattis',
-        'ullamcorper',
-        'velit',
-        'sed',
-        'ullamcorper',
-        'morbi',
-        'tincidunt',
-        'ornare',
-        'massa,',
-        'eget',
-        'egestas',
-        'purus',
-        'viverra',
-        'accumsan',
-        'in',
-        'nisl',
-        'nisi,',
-        'scelerisque',
-        'eu',
-        'ultrices',
-        'vitae,',
-        'auctor',
-        'eu',
-        'augue',
-        'ut',
-        'lectus',
-        'arcu,',
-        'bibendum',
-        'at',
-        'varius',
-        'vel,',
-        'pharetra',
-        'vel',
-        'turpis',
-        'nunc',
-        'eget',
-        'lorem',
-        'dolor,',
-        'sed',
-        'viverra',
-        'ipsum',
-        'nunc',
-        'aliquet',
-        'bibendum',
-        'enim,',
-        'facilisis',
-        'gravida',
-        'neque',
-        'convallis',
-        'a',
-        'cras',
-        'semper',
-        'auctor',
-        'neque,',
-        'vitae',
-        'tempus',
-        'quam',
-        'pellentesque',
-        'nec',
-        'nam',
-        'aliquam',
-        'sem',
-        'et',
-        'tortor',
-        'consequat',
-        'id',
-        'porta',
-        'nibh',
-        'venenatis',
-        'cras',
-        'sed',
-        'felis',
-        'eget',
-        'velit',
-        'aliquet',
-        'sagittis',
-        'id',
-        'consectetur',
-        'purus',
-        'ut',
-        'faucibus',
-        'pulvinar',
-        'elementum',
-        'integer',
-        'enim',
-        'neque,',
-        'volutpat',
-        'ac',
-        'tincidunt',
-        'vitae,',
-        'semper',
-        'quis',
-        'lectus',
-        'nulla',
-        'at',
-        'volutpat',
-        'diam',
-        'ut',
-        'venenatis',
-        'tellus',
-        'in',
-        'metus',
-        'vulputate',
-        'eu',
-        'scelerisque',
-        'felis',
-        'imperdiet',
-        'proin',
-        'fermentum',
-        'leo',
-        'vel',
-        'orci',
-        'porta',
-        'non',
-        'pulvinar',
-        'neque',
-        'laoreet',
-        'suspendisse',
-        'interdum',
-        'consectetur',
-        'libero,',
-        'id',
-        'faucibus',
-        'nisl',
-        'tincidunt',
-        'eget',
-        'nullam',
-        'non',
-        'nisi',
-        'est,',
-        'sit',
-        'amet',
-        'facilisis',
-        'magna',
-        'etiam',
-        'tempor,',
-        'orci',
-        'eu',
-        'lobortis',
-        'elementum,',
-        'nibh',
-        'tellus',
-        'molestie',
-        'nunc,',
-        'non',
-        'blandit',
-        'massa',
-        'enim',
-        'nec',
-        'dui',
-        'nunc',
-        'mattis',
-        'enim',
-        'ut',
-        'tellus',
-        'elementum',
-        'sagittis',
-        'vitae',
-        'et',
-        'leo',
-        'duis',
-        'ut',
-        'diam',
-        'quam',
-        'nulla',
-        'porttitor',
-        'massa',
-        'id',
-        'neque',
-        'aliquam',
-        'vestibulum',
-        'morbi',
-        'blandit',
-        'cursus',
-        'risus,',
-        'at',
-        'ultrices',
-        'mi',
-        'tempus',
-        'imperdiet',
-        'nulla',
-        'malesuada',
-        'pellentesque',
-        'elit',
-        'eget',
-        'gravida',
-        'cum',
-        'sociis',
-        'natoque',
-        'penatibus',
-        'et',
-        'magnis',
-        'dis',
-        'parturient',
-        'montes,',
-        'nascetur',
-        'ridiculus',
-        'mus',
-        'mauris',
-        'vitae',
-        'ultricies',
-        'leo',
-        'integer',
-        'malesuada',
-        'nunc',
-        'vel',
-        'risus',
-        'commodo',
-        'viverra',
-        'maecenas',
-        'accumsan,',
-        'lacus',
-        'vel',
-        'facilisis',
-        'volutpat,',
-        'est',
-        'velit',
-        'egestas',
-        'dui,',
-        'id',
-        'ornare',
-        'arcu',
-        'odio',
-        'ut',
-        'sem',
-        'nulla',
-        'pharetra',
-        'diam',
-        'sit',
-        'amet',
-        'nisl',
-        'suscipit',
-        'adipiscing',
-        'bibendum',
-        'est',
-        'ultricies',
-        'integer',
-        'quis',
-        'auctor',
-        'elit',
-        'sed',
-        'vulputate',
-        'mi',
-        'sit',
-        'amet',
-        'mauris',
-        'commodo',
-        'quis',
-        'imperdiet',
-        'massa',
-        'tincidunt',
-        'nunc',
-        'pulvinar',
-        'sapien',
-        'et',
-        'ligula',
-        'ullamcorper',
-        'malesuada',
-        'proin',
-        'libero',
-        'nunc,',
-        'consequat',
-        'interdum',
-        'varius',
-        'sit',
-        'amet,',
-        'mattis',
-        'vulputate',
-        'enim',
-        'nulla',
-        'aliquet',
-        'porttitor',
-        'lacus,',
-        'luctus',
-        'accumsan',
-        'tortor',
-        'posuere',
-        'ac',
-        'ut',
-        'consequat',
-        'semper',
-        'viverra',
-        'nam',
-        'libero',
-        'justo,',
-        'laoreet',
-        'sit',
-        'amet',
-        'cursus',
-        'sit',
-        'amet,',
-        'dictum',
-        'sit',
-        'amet',
-        'justo',
-        'donec',
-        'enim',
-        'diam,',
-        'vulputate',
-        'ut',
-        'pharetra',
-        'sit',
-        'amet,',
-        'aliquam',
-        'id',
-        'diam',
-        'maecenas',
-        'ultricies',
-        'mi',
-        'eget',
-        'mauris',
-        'pharetra',
-        'et',
-        'ultrices',
-        'neque',
-        'ornare',
-        'aenean',
-        'euismod',
-        'elementum',
-        'nisi,',
-        'quis',
-        'eleifend',
-        'quam',
-        'adipiscing',
-        'vitae',
-        'proin',
-        'sagittis,',
-        'nisl',
-        'rhoncus',
-        'mattis',
-        'rhoncus,',
-        'urna',
-        'neque',
-        'viverra',
-        'justo,',
-        'nec',
-        'ultrices',
-        'dui',
-        'sapien',
-        'eget',
-        'mi',
-        'proin',
-        'sed',
-        'libero',
-        'enim,',
-        'sed',
-        'faucibus',
-        'turpis',
-        'in',
-        'eu',
-        'mi',
-        'bibendum',
-        'neque',
-        'egestas',
-        'congue',
-        'quisque',
-        'egestas',
-        'diam',
-        'in',
-        'arcu',
-        'cursus',
-        'euismod',
-        'quis',
-        'viverra',
-        'nibh',
-        'cras',
-        'pulvinar',
-        'mattis',
-        'nunc,',
-        'sed',
-        'blandit',
-        'libero',
-        'volutpat',
-        'sed',
-        'cras',
-        'ornare',
-        'arcu',
-        'dui',
-        'vivamus',
-        'arcu',
-        'felis,',
-        'bibendum',
-        'ut',
-        'tristique',
-        'et,',
-        'egestas',
-        'quis',
-        'ipsum',
-        'suspendisse',
-        'ultrices',
-        'fusce',
-        'ut',
-        'placerat',
-        'orci',
-        'nulla',
-        'pellentesque',
-        'dignissim',
-        'enim,',
-        'sit',
-        'amet',
-        'venenatis',
-        'urna',
-        'cursus',
-        'eget',
-        'nunc',
-        'scelerisque',
-        'viverra',
-        'mauris,',
-        'in',
-        'aliquam',
-        'sem',
-        'fringilla',
-        'ut',
-        'morbi',
-        'tincidunt',
-        'augue',
-        'interdum',
-        'velit',
-        'euismod',
-        'in',
-        'pellentesque',
-        'massa',
-        'placerat',
-        'duis',
-        'ultricies',
-        'lacus',
-        'sed',
-        'turpis',
-        'tincidunt',
-        'id',
-        'aliquet',
-        'risus',
-        'feugiat',
-        'in',
-        'ante',
-        'metus,',
-        'dictum',
-        'at',
-        'tempor',
-        'commodo,',
-        'ullamcorper',
-        'a',
-        'lacus',
-        'vestibulum',
-        'sed',
-        'arcu',
-        'non',
-        'odio',
-        'euismod',
-        'lacinia',
-        'at',
-        'quis',
-        'risus',
-        'sed',
-        'vulputate',
-        'odio',
-        'ut',
-        'enim',
-        'blandit',
-        'volutpat',
-        'maecenas',
-        'volutpat',
-        'blandit',
-        'aliquam',
-        'etiam',
-        'erat',
-        'velit,',
-        'scelerisque',
-        'in',
-        'dictum',
-        'non,',
-        'consectetur',
-        'a',
-        'erat',
-        'nam',
-        'at',
-        'lectus',
-        'urna',
-        'duis',
-        'convallis',
-        'convallis',
-        'tellus,',
-        'id',
-        'interdum',
-        'velit',
-        'laoreet',
-        'id',
-        'donec',
-        'ultrices',
-        'tincidunt',
-        'arcu,',
-        'non',
-        'sodales',
-        'neque',
-        'sodales',
-        'ut',
-        'etiam',
-        'sit',
-        'amet',
-        'nisl',
-        'purus,',
-        'in',
-        'mollis',
-        'nunc',
-        'sed',
-        'id',
-        'semper',
-        'risus',
-        'in',
-        'hendrerit',
-        'gravida',
-        'rutrum',
-        'quisque',
-        'non',
-        'tellus',
-        'orci,',
-        'ac',
-        'auctor',
-        'augue',
-        'mauris',
-        'augue',
-        'neque,',
-        'gravida',
-        'in',
-        'fermentum',
-        'et,',
-        'sollicitudin',
-        'ac',
-        'orci',
-        'phasellus',
-        'egestas',
-        'tellus',
-        'rutrum',
-        'tellus',
-        'pellentesque',
-        'eu',
-        'tincidunt',
-        'tortor',
-        'aliquam',
-        'nulla',
-        'facilisi',
-        'cras',
-        'fermentum,',
-        'odio',
-        'eu',
-        'feugiat',
-        'pretium,',
-        'nibh',
-        'ipsum',
-        'consequat',
-        'nisl,',
-        'vel',
-        'pretium',
-        'lectus',
-        'quam',
-        'id',
-        'leo',
-        'in',
-        'vitae',
-        'turpis',
-        'massa',
-        'sed',
-        'elementum',
-        'tempus',
-        'egestas',
-        'sed',
-        'sed',
-        'risus',
-        'pretium',
-        'quam',
-        'vulputate',
-        'dignissim',
-        'suspendisse',
-        'in',
-        'est',
-        'ante',
-        'in',
-        'nibh',
-        'mauris,',
-        'cursus',
-        'mattis',
-        'molestie',
-        'a,',
-        'iaculis',
-        'at',
-        'erat',
-        'pellentesque',
-        'adipiscing',
-        'commodo',
-        'elit,',
-        'at',
-        'imperdiet',
-        'dui',
-        'accumsan',
-        'sit',
-        'amet',
-        'nulla',
-        'facilisi',
-        'morbi',
-        'tempus',
-        'iaculis',
-        'urna,',
-        'id',
-        'volutpat',
-        'lacus',
-        'laoreet',
-        'non',
-        'curabitur',
-        'gravida',
-        'arcu',
-        'ac',
-        'tortor',
-        'dignissim',
-        'convallis',
-        'aenean',
-        'et',
-        'tortor',
-        'at',
-        'risus',
-        'viverra',
-        'adipiscing',
-        'at',
-        'in',
-        'tellus',
-        'integer',
-        'feugiat',
-        'scelerisque',
-        'varius',
-        'morbi',
-        'enim',
-        'nunc,',
-        'faucibus',
-        'a',
-        'pellentesque',
-        'sit',
-        'amet,',
-        'porttitor',
-        'eget',
-        'dolor',
-        'morbi',
-        'non',
-        'arcu',
-        'risus,',
-        'quis',
-        'varius',
-        'quam',
-        'quisque',
-        'id',
-        'diam',
-        'vel',
-        'quam',
-        'elementum',
-        'pulvinar',
-        'etiam',
-        'non',
-        'quam',
-        'lacus',
-        'suspendisse',
-        'faucibus',
-        'interdum',
-        'posuere',
-        'lorem',
-        'ipsum',
-        'dolor',
-        'sit',
-        'amet,',
-        'consectetur',
-        'adipiscing',
-        'elit',
-        'duis',
-        'tristique',
-        'sollicitudin',
-        'nibh',
-        'sit',
-        'amet',
-        'commodo',
-        'nulla',
-        'facilisi',
-        'nullam',
-        'vehicula',
-        'ipsum',
-        'a',
-        'arcu',
-        'cursus',
-        'vitae',
-        'congue',
-        'mauris',
-        'rhoncus',
-        'aenean',
-        'vel',
-        'elit',
-        'scelerisque',
-        'mauris',
-        'pellentesque',
-        'pulvinar',
-        'pellentesque',
-        'habitant',
-        'morbi',
-        'tristique',
-        'senectus',
-        'et',
-        'netus',
-        'et',
-        'malesuada',
-        'fames',
-        'ac',
-        'turpis',
-        'egestas',
-        'maecenas',
-        'pharetra',
-        'convallis',
-        'posuere',
-        'morbi',
-        'leo',
-        'urna,',
-        'molestie',
-        'at',
-        'elementum',
-        'eu,',
-        'facilisis',
-        'sed',
-        'odio',
-        'morbi',
-        'quis',
-        'commodo',
-        'odio',
-        'aenean',
-        'sed',
-        'adipiscing',
-        'diam',
-        'donec',
-        'adipiscing',
-        'tristique',
-        'risus',
-        'nec',
-        'feugiat',
-        'in',
-        'fermentum',
-        'posuere',
-        'urna',
-        'nec',
-        'tincidunt',
-        'praesent',
-        'semper',
-        'feugiat',
-        'nibh',
-        'sed',
-        'pulvinar',
-        'proin',
-        'gravida',
-        'hendrerit',
-        'lectus',
-        'a',
-        'molestie',
-        'gravida',
-        'dictum'
-      ];
-    return {
-      createSentence: function (n) {
-        var r, i;
-        return n = n || t(5, 20), r = t(0, e.length - n - 1), i = e.slice(r, r + n).join(' ').replace(/\,$/g, '') + '.', i = i.charAt(0).toUpperCase() + i.slice(1), i;
-      },
-      createSentences: function (e) {
-        var n = [], r = 0;
-        e = e || t(3, 5);
-        for (r = 0; r < e; r++)
-          n.push(this.createSentence());
-        return n.join(' ');
-      },
-      createParagraph: function (e) {
-        var t = this.createSentences(e);
-        return '<p>' + t + '</p>';
-      },
-      createParagraphs: function (e, n) {
-        var r = [], i = 0;
-        e = e || t(3, 7);
-        for (i = 0; i < e; i++)
-          r.push(this.createParagraph(n));
-        return r.join('\n');
-      }
-    };
-  }).directive('phTxt', [
-    'TextGeneratorService',
-    function (e) {
-      return {
-        restrict: 'EA',
-        controller: [
-          '$scope',
-          '$element',
-          '$attrs',
-          function (t, n, r) {
-            function o() {
-              var t;
-              s || !i ? t = e.createParagraphs(s, i) : t = e.createSentences(i), n.html(t);
-            }
-            var i, s;
-            r.$observe('phTxt', function (e) {
-              var t, n;
-              t = e.match(/(\d+)p/), n = e.match(/(\d+)s/), t !== null ? s = parseInt(t[1], 10) : s = !1, n !== null ? i = parseInt(n[1], 10) : i = !1, o();
-            }), r.phTxt || o();
-          }
-        ]
-      };
-    }
-  ]);
   angular.module('ui.route', []).directive('uiRoute', [
     '$location',
     '$parse',
@@ -2858,27 +1625,28 @@
           return encodeURIComponent(val).replace(/%40/gi, '@').replace(/%3A/gi, ':').replace(/%24/g, '$').replace(/%2C/gi, ',').replace(/%20/g, pctEncodeSpaces ? '%20' : '+');
         }
         function Route(template, defaults) {
-          this.template = template = template + '#';
+          this.template = template;
           this.defaults = defaults || {};
-          var urlParams = this.urlParams = {};
-          forEach(template.split(/\W/), function (param) {
-            if (param && new RegExp('(^|[^\\\\]):' + param + '\\W').test(template)) {
-              urlParams[param] = true;
-            }
-          });
-          this.template = template.replace(/\\:/g, ':');
+          this.urlParams = {};
         }
         Route.prototype = {
-          url: function (params) {
-            var self = this, url = this.template, val, encodedVal;
+          setUrlParams: function (config, params, actionUrl) {
+            var self = this, url = actionUrl || self.template, val, encodedVal;
+            var urlParams = self.urlParams = {};
+            forEach(url.split(/\W/), function (param) {
+              if (param && new RegExp('(^|[^\\\\]):' + param + '(\\W|$)').test(url)) {
+                urlParams[param] = true;
+              }
+            });
+            url = url.replace(/\\:/g, ':');
             params = params || {};
-            forEach(this.urlParams, function (_, urlParam) {
+            forEach(self.urlParams, function (_, urlParam) {
               val = params.hasOwnProperty(urlParam) ? params[urlParam] : self.defaults[urlParam];
               if (angular.isDefined(val) && val !== null) {
                 encodedVal = encodeUriSegment(val);
-                url = url.replace(new RegExp(':' + urlParam + '(\\W)', 'g'), encodedVal + '$1');
+                url = url.replace(new RegExp(':' + urlParam + '(\\W|$)', 'g'), encodedVal + '$1');
               } else {
-                url = url.replace(new RegExp('(/?):' + urlParam + '(\\W)', 'g'), function (match, leadingSlashes, tail) {
+                url = url.replace(new RegExp('(/?):' + urlParam + '(\\W|$)', 'g'), function (match, leadingSlashes, tail) {
                   if (tail.charAt(0) == '/') {
                     return tail;
                   } else {
@@ -2887,16 +1655,15 @@
                 });
               }
             });
-            url = url.replace(/\/?#$/, '');
-            var query = [];
+            url = url.replace(/\/+$/, '');
+            url = url.replace(/\/\.(?=\w+($|\?))/, '.');
+            config.url = url.replace(/\/\\\./, '/.');
             forEach(params, function (value, key) {
               if (!self.urlParams[key]) {
-                query.push(encodeUriQuery(key) + '=' + encodeUriQuery(value));
+                config.params = config.params || {};
+                config.params[key] = value;
               }
             });
-            query.sort();
-            url = url.replace(/\/*$/, '');
-            return url + (query.length ? '?' + query.join('&') : '');
           }
         };
         function ResourceFactory(url, paramDefaults, actions) {
@@ -2906,7 +1673,10 @@
             var ids = {};
             actionParams = extend({}, paramDefaults, actionParams);
             forEach(actionParams, function (value, key) {
-              ids[key] = value.charAt && value.charAt(0) == '@' ? getter(data, value.substr(1)) : value;
+              if (isFunction(value)) {
+                value = value();
+              }
+              ids[key] = value && value.charAt && value.charAt(0) == '@' ? getter(data, value.substr(1)) : value;
             });
             return ids;
           }
@@ -2921,6 +1691,7 @@
               var data;
               var success = noop;
               var error = null;
+              var promise;
               switch (arguments.length) {
               case 4:
                 error = a4;
@@ -2955,12 +1726,23 @@
                 throw 'Expected between 0-4 arguments [params, data, success, error], got ' + arguments.length + ' arguments.';
               }
               var value = this instanceof Resource ? this : action.isArray ? [] : new Resource(data);
-              $http({
-                method: action.method,
-                url: route.url(extend({}, extractParams(data, action.params || {}), params)),
-                data: data
-              }).then(function (response) {
+              var httpConfig = {}, promise;
+              forEach(action, function (value, key) {
+                if (key != 'params' && key != 'isArray') {
+                  httpConfig[key] = copy(value);
+                }
+              });
+              httpConfig.data = data;
+              route.setUrlParams(httpConfig, extend({}, extractParams(data, action.params || {}), params), action.url);
+              function markResolved() {
+                value.$resolved = true;
+              }
+              promise = $http(httpConfig);
+              value.$resolved = false;
+              promise.then(markResolved, markResolved);
+              value.$then = promise.then(function (response) {
                 var data = response.data;
+                var then = value.$then, resolved = value.$resolved;
                 if (data) {
                   if (action.isArray) {
                     value.length = 0;
@@ -2969,10 +1751,14 @@
                     });
                   } else {
                     copy(data, value);
+                    value.$then = then;
+                    value.$resolved = resolved;
                   }
                 }
                 (success || noop)(value, response.headers);
-              }, error);
+                response.resource = value;
+                return response;
+              }, error).then;
               return value;
             };
             Resource.prototype['$' + name] = function (a1, a2, a3) {
